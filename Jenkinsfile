@@ -58,27 +58,30 @@ pipeline {
                     // Remove old deployment
                     echo 'Cleaning old deployment...'
                     sh """
-                        sudo rm -rf ${TOMCAT_WEBAPPS}/ROOT
-                        sudo rm -f ${TOMCAT_WEBAPPS}/ROOT.war
+                        sudo rm -rf /opt/apache-tomcat-9.0.96/webapps/ROOT
+                        sudo rm -f /opt/apache-tomcat-9.0.96/webapps/ROOT.war
                     """
                     
                     // Verify cleanup
                     echo 'Verifying cleanup...'
-                    sh "sudo ls -la ${TOMCAT_WEBAPPS}/ || true"
+                    sh "sudo ls -la /opt/apache-tomcat-9.0.96/webapps/ || true"
                     
                     // Copy new WAR file
                     echo 'Copying new WAR file...'
-                    sh "sudo cp target/${WAR_FILE} ${TOMCAT_WEBAPPS}/ROOT.war"
+                    sh "sudo cp target/lumiatech-v1.war /opt/apache-tomcat-9.0.96/webapps/ROOT.war"
                     
                     // Verify copy
                     echo 'Verifying deployment file...'
-                    sh "sudo ls -lh ${TOMCAT_WEBAPPS}/ROOT.war"
+                    sh "sudo ls -lh /opt/apache-tomcat-9.0.96/webapps/ROOT.war"
                     
                     // Set ownership and permissions
                     echo 'Setting permissions...'
                     sh """
-                        sudo chown tomcat:tomcat ${TOMCAT_WEBAPPS}/ROOT.war
-                        sudo chmod 644 ${TOMCAT_WEBAPPS}/ROOT.war
+                        sudo chown tomcat:tomcat /opt/apache-tomcat-9.0.96/webapps/ROOT.war
+                        sudo chmod -R 755 /opt/apache-tomcat-9.0.96/webapps
+                        sleep 5
+                        sudo tail -n 50 /opt/apache-tomcat-9.0.96/logs/catalina.out || true
+                        
                     """
                     
                     // Start Tomcat
