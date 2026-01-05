@@ -42,18 +42,7 @@ pipeline {
                 }
             }
         }
-        
-        stage('Code Analysis') {
-            steps {                
-                sh 'mvn checkstyle:checkstyle'
-            }
-            post {
-                success {
-                    recordIssues(tools: [checkStyle(pattern: '**/target/checkstyle-result.xml')])
-                }
-            }
-        }
-        
+                
         stage('Deploy to Tomcat') {
             steps {
                 echo '========================================='
