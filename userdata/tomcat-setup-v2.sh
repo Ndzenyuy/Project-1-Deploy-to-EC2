@@ -82,6 +82,19 @@ Environment="CATALINA_HOME=/opt/apache-tomcat-9.0.96"
 Environment="CATALINA_BASE=/opt/apache-tomcat-9.0.96"
 Environment="CATALINA_PID=/opt/apache-tomcat-9.0.96/temp/tomcat.pid"
 Environment="CATALINA_OPTS=-Xms512M -Xmx1024M -server"
+Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+Environment="CATALINA_HOME=/opt/apache-tomcat-9.0.96"
+Environment="CATALINA_BASE=/opt/apache-tomcat-9.0.96"
+Environment="CATALINA_PID=/opt/apache-tomcat-9.0.96/temp/tomcat.pid"
+Environment="CATALINA_OPTS=-Xms512M -Xmx1024M -server -XX:+UseParallelGC \
+--add-opens java.base/java.lang=ALL-UNNAMED \
+--add-opens java.base/java.lang.invoke=ALL-UNNAMED \
+--add-opens java.base/java.lang.reflect=ALL-UNNAMED \
+--add-opens java.base/java.io=ALL-UNNAMED \
+--add-opens java.base/java.security=ALL-UNNAMED \
+--add-opens java.base/java.util=ALL-UNNAMED \
+--add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+--add-opens java.rmi/sun.rmi.transport=ALL-UNNAMED"
 
 ExecStart=/opt/apache-tomcat-9.0.96/bin/startup.sh
 ExecStop=/opt/apache-tomcat-9.0.96/bin/shutdown.sh
