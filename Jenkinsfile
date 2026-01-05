@@ -77,7 +77,7 @@ pipeline {
                     // Set ownership and permissions
                     echo 'Setting permissions...'
                     sh """
-                        sudo chown tomcat:tomcat /opt/apache-tomcat-9.0.96/webapps/ROOT.war
+                        sudo chown tomcat:tomcat /opt/apache-tomcat-9.0.96/webapps
                         sudo chmod -R 755 /opt/apache-tomcat-9.0.96/webapps
                         sleep 5
                         sudo tail -n 50 /opt/apache-tomcat-9.0.96/logs/catalina.out || true
