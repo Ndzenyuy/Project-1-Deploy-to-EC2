@@ -1,444 +1,188 @@
-# Project 9: Continues Delivery of Java Webapp
-In project 5, I deployed a Continues Integration pipeline using Jenkins. The pipeline deployed an app that is written in Java, built and stored the artifacts on Nexus Server, Containerized the app and stored it in ECR. This project was the continuation, taking the image from ECR and deploying to ECS, Tested the project in staging and promotted it to Production. 
+# 🚀 DevOps Project 1 – CI/CD Pipeline with Jenkins, Tomcat & EC2
 
-## Architecture
-![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/project%209%20architecture.jpg)
+## 📌 Project Overview
 
-## Steps
-1. Branches and Webhook\
-Create a new branch from ci-jenkins by running this git command within the project folder
-```
-git checkout -b cicd-jenkins
-```
-For webhooks, login to the project repository in Github and goto settings -> Webhooks -> Edit webhooks, then enter the public IP of the Jenkins EC instance -> save and test connection
+This project is part of a **hands-on DevOps learning series** designed to help **junior DevOps engineers** build real-world skills using industry-standard tools.
 
-2. AWS IAM and ECR\
-Create an AWS IAM user
-```
-Name: cicd-jenkins
-Policies: - AmazonECS_FullAccess
-          - AmazonEC2ContainerRegistryFullAccess
-Programatic access = true(download CSV file)
-```
+In this project, we build a **complete CI/CD pipeline** that:
 
-In ECR, create a private repository
-```Name: vprofileappimg```
-
-3. Jenkins configurations
-
-Open Jenkins webpage, and install the following plugins
-```
-    - Docker pipeline
-    - CloudBees Docker Build and Publish
-    - Amazon ECR
-    - Pipeline: AWS Steps
-```
-Go to manage Jenkins -> Credentials -> new credentials -> kind AWS credentials
-```
-    ID: awscreds
-    description: awscreds
-    Access Key ID: <paste the access keys for jenkins IAM user created above>
-    Secret Key ID: <paste the secret key for jenkins>
-```
-and create.
-
-Next ssh into JenkinsServer and run the following to install awscli and docker engine
-
-```
-sudo -i
-apt update && apt install awscli -y
-apt-get update
-apt-get install ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-Verify if the pipeline for project 5 is working, necessary for the next steps
+- Provisions an EC2 instance using **UserData**
+- Installs and configures:
+  - **Java 17**
+  - **Maven**
+  - **Apache Tomcat 9**
+  - **Jenkins**
+- Builds a Java WAR application using **Maven**
+- Deploys the application automatically to **Tomcat**
+- Performs a basic **health check**
 
 
-4. Docker Build in Pipeline
-Open VSCode, open Dockerfile, under the multistage/app folder, should contain the following code: 
-```
-FROM openjdk:11 AS BUILD_IMAGE
-RUN apt update && apt install maven -y
-RUN git clone https://github.com/devopshydclub/vprofile-project.git
-RUN cd vprofile-project && git checkout docker && mvn install
+## 🧠 Learning Objectives
 
-FROM tomcat:9-jre11
+By completing this project, you will learn how to:
 
-RUN rm -rf /usr/local/tomcat/webapps/*
+- Use **EC2 UserData** for automated server bootstrapping
+- Run **multiple services (Jenkins & Tomcat)** on the same VM without port conflicts
+- Configure **Tomcat as a systemd service**
+- Build and deploy Java applications using **Jenkins Pipelines**
+- Understand **permissions, ownership, and service control** in Linux
+- Troubleshoot **Java, Tomcat, and Spring runtime issues**
 
-COPY --from=BUILD_IMAGE vprofile-project/target/vprofile-v2.war /usr/local/tomcat/webapps/ROOT.war
+---
 
-EXPOSE 8080
-CMD ["catalina.sh", "run"]
+## 🏗️ Architecture
 
-```
-Edit the stage pipeline file(StagePipeline/Jenkinsfile) and give it the following contents
-```
-/*def COLOR_MAP [
-    'SUCCESS': 'good',
-    'FAILURE': 'danger',
-]*/
-pipeline {
-    agent any
-    tools {
-        maven "MAVEN3"
-        jdk "OracleJDK8"
-    }
-    
-    environment {
-        SNAP_REPO = 'vprofile-snapshot'
-		NEXUS_USER = 'admin'
-		NEXUS_PASS = 'admin123'
-		RELEASE_REPO = 'vprofile-release'
-		CENTRAL_REPO = 'vpro-maven-central'
-		NEXUSIP = '172.31.20.72'
-		NEXUSPORT = '8081'
-		NEXUS_GRP_REPO = 'vpro-maven-group'
-        NEXUS_LOGIN = 'nexuslogin'
-        SONARSERVER = 'sonarserver'
-        SONARSCANNER = 'sonarscanner'
-        registryCredential = 'ecr:us-east-1:awscreds'
-        appRegistry = '997450571655.dkr.ecr.us-east-1.amazonaws.com/vprofileappimg'    
-        vprofileRegistry = "https://997450571655.dkr.ecr.us-east-1.amazonaws.com/vprofileappimg"
-        cluster = "vprostaging"
-        service = "vproappstagesvc"
-    }
 
-    stages {
-        stage('Build'){
-            steps {
-                sh 'mvn -s settings.xml -DskipTests install'
-            }
-            post {
-                success {
-                    echo "Now Archiving."
-                    archiveArtifacts artifacts: '**/*.war'
-                }
-            }
-        }
+## 🔧 Technology Stack
 
-        stage('Test'){
-            steps {
-                sh 'mvn -s settings.xml test'
-            }
+| Component | Version |
+|---------|--------|
+| OS | Ubuntu 22.04 |
+| Java | OpenJDK 17 |
+| Maven | 3.x |
+| Tomcat | 9.0.96 |
+| Jenkins | LTS |
+| Build Tool | Maven |
+| Artifact Type | WAR |
+| CI/CD | Jenkins Declarative Pipeline |
 
-        }
+---
 
-        stage('Checkstyle Analysis') {
-            steps {
-                sh 'mvn -s settings.xml checkstyle:checkstyle'
+## 🌐 Service Ports
 
-            }
-        }
+| Service | Port |
+|-------|------|
+| Tomcat (Application) | **8081** |
+| Jenkins | **8080** |
 
-        stage('CODE ANALYSIS with SONARQUBE') {
-          
-		  environment {
-             scannerHome = tool "${SONARSCANNER}"
-          }
+> ⚠️ Ensure your EC2 Security Group allows inbound traffic on these ports.
 
-          steps {
-            
-            withSonarQubeEnv("${SONARSERVER}") {
-               sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                   -Dsonar.projectName=vprofile-repo \
-                   -Dsonar.projectVersion=1.0 \
-                   -Dsonar.sources=src/ \
-                   -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                   -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                   -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                   -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml"
-            }
+## 🚀 EC2 Bootstrapping (UserData)
 
-            
+The EC2 instance is fully configured at launch using **UserData**.
 
-            timeout(time: 10, unit: 'MINUTES') {
-               waitForQualityGate abortPipeline: true
-            }
-          }
-        }  
+### What UserData Does
 
-        stage("UploadArtifact"){
-            steps{
-                nexusArtifactUploader(
-                  nexusVersion: 'nexus3',
-                  protocol: 'http',
-                  nexusUrl: "${NEXUSIP}:${NEXUSPORT}",
-                  groupId: 'QA',
-                  version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-                  repository: "${RELEASE_REPO}",
-                  credentialsId: "${NEXUS_LOGIN}",
-                  artifacts: [
-                    [artifactId: 'vproapp',
-                     classifier: '',
-                     file: 'target/vprofile-v2.war',
-                     type: 'war']
-                  ]
-                )
-            }
-        }  
+- Installs Java 17 & Maven
+- Installs Jenkins
+- Installs and configures Tomcat
+- Changes Tomcat port from `8080 → 8081`
+- Creates a `tomcat` system user
+- Registers Tomcat as a `systemd` service
+- Starts Jenkins and Tomcat automatically
 
-        stage('Build App Image'){
-            steps {
-                script {
-                    dockerImage = docker.build( appRegistry + ":$BUILD_NUMBER", "./Docker-files/app/multistage/")
-                }
-            }
-        }
-        
-        stage('Upload App Image') {
-          steps{
-            script {
-              docker.withRegistry( vprofileRegistry, registryCredential ) {
-                dockerImage.push("$BUILD_NUMBER")
-                dockerImage.push('latest')
-              }
-            }
-          }
-        } 
+📄 **File:** `userdata.sh`
 
-        stage('Deploy to ECS staging') {
-            steps {
-                withAWS(credentials: 'awscreds', region: 'us-east-2') {
-                    sh 'aws ecs update-service --cluster ${cluster} --service ${service} --force-new-deployment'
-                } 
-            }
-        }
-    }
+## 🔄 Jenkins Pipeline Overview
 
-    post {
-        always {
-            echo 'Slack Notifications'
-            slackSend channel: '#jenkinscicd',
-                colo: COLOR_MAP[currentBuild.currentResult],
-                message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}"
-        }
-    }
-}
+The pipeline is defined using a **Declarative Jenkinsfile**.
 
-```
-Make sure to modify: 
-    - NEXUS_IP=private ip of NexusServer 
-    - the AWS region where the project is done.
-    - appRegistry = the URL of the registry(vprofileappimg) that was create in ECR
-    - vprofileRegistry = the URL of the app repository
+### Pipeline Stages
 
-Back to Jenkins, create new pipeline:
-```
-name: vprofile-cicd-pipeline-docker
-project type: pipeline
-Project settings: 
-    - BuildTriggers: Github hook trigger for GITScm polling
-    - Pipeline : pipeline script from scm
-                SCM: Git
-                Repo url: Add the ssh url of your Github repository
-                login: githublogin(saved in project 5)
-                branch: cicd-jenkins
-                Jenkinsfile: StagePipeline/Jenkinsfile
+1. **Checkout**
+   - Pulls code from the `main` branch
+
+2. **Build Artifact**
+   - Runs `mvn clean package`
+   - Produces a WAR file
+
+3. **Test**
+   - Executes unit tests
+   - Publishes test reports
+
+4. **Deploy to Tomcat**
+   - Stops Tomcat
+   - Removes previous deployment
+   - Copies WAR as `ROOT.war`
+   - Sets permissions
+   - Restarts Tomcat
+
+5. **Health Check**
+   - Verifies Tomcat is running
+   - Performs HTTP check on the application
+   - Scans logs for successful startup
+
+📄 **File:** `Jenkinsfile`
+
+## 📦 Deployment Strategy
+
+The WAR file is deployed as:
+
+/opt/apache-tomcat-9.0.96/webapps/ROOT.war
+
+This makes the application available at:
+
+http://<EC2-PUBLIC-IP>:8081/
+
+## 🔐 Permissions Model
+
+- Jenkins runs as user: `jenkins`
+- Tomcat runs as user: `tomcat`
+- Jenkins uses `sudo` to:
+  - Control the Tomcat service
+  - Copy WAR artifacts
+  - Set file ownership
+
+This mirrors **real-world CI/CD server setups**.
+
+
+
+## 🧪 Health Check Logic
+
+The pipeline verifies:
+
+- Tomcat service status
+- HTTP response from the application
+- Spring initialization logs in `catalina.out`
+
+---
+
+## 🛠️ Common Troubleshooting
+
+### View Tomcat logs
+```bash
+sudo tail -100 /opt/apache-tomcat-9.0.96/logs/catalina.out
+Check Tomcat service
+sudo systemctl status tomcat9
+Jenkins logs
+sudo journalctl -u jenkins -n 100
 ```
 
---> save and build now
-![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/jenkinsbuild-cicd-sucess.png)
-![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/vcr-build-images.png)
+🔄 Improvements in Next Projects
+Upcoming projects in this DevOps series will introduce:
 
-5. AWS ECS Setup
- - Create a cluster:
-    ```
-    cluster name: vprostaging
-    monitoring: user container insights = true
-    tags: Name=vprostaging
-    ```
- - Creat a task defination
- ```
- name: vproappstagetask
- container name: vproapp
-           image uri: copy the uri of the registry from where it will fetch image
-           port: 8080
-           CPU: 1V, memory: 2GB
- ```
- review and create\
+Nginx reverse proxy
 
- - Create a service to use the task defination\
- Click and open the created cluster, then -> services -> new service
-   ```
-   compute configuration: Lauch type
-   task definition: vproappstagetask
-   service name: vproappstagesvc
-   Networking: create security group
-              name: vproappstagesg
-              inbout rule: all traffic from anywhere
-    Load balancing:
-        create new load balancer = true
-        name: vproappstageelb
-        listener port:80
-        Targetgroup: vproappstagetg
-        Healthcheck : /login
-        Healthcheck grace period: 30s
-   ```
-   Verify and create.\ 
-   During creation, modify the target group healthcheck under advanced options and overide healthchecks to 8080. 
-   ![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/target-group-override.png)
+HTTPS with Let’s Encrypt
 
-   ![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/task%20creation%20success.png)
+Dockerized Jenkins & Tomcat
 
-6. Pipeline for ECS
-Now onto Jenkinsfile, the deploy stage needs to be updated in order for it to deploy automatically when ever a new image is uploaded. Here the cluster name and the service names are needed.\
-The Jenkinsfile should be:
+GitHub Actions vs Jenkins
+
+AWS ALB + Auto Scaling
+
+Blue/Green deployments
+
+ECS & Kubernetes migration
+
+🎯 Target Audience
+This project is ideal for:
+- Junior DevOps Engineers
+- DevOps learners & students
+- Engineers transitioning into DevOps
+- Candidates preparing for DevOps interviews
+
+✅ Final Result
+After a successful pipeline run:
+
+Jenkins Dashboard:
 
 ```
-def COLOR_MAP = [
-    'SUCCESS': 'good', 
-    'FAILURE': 'danger',
-]
-pipeline {
-    agent any
-    tools {
-        maven "MAVEN3"
-        jdk "OracleJDK8"
-    }
-    
-    environment {
-        SNAP_REPO = 'vprofile-snapshot'
-		NEXUS_USER = 'admin'
-		NEXUS_PASS = 'admin123'
-		RELEASE_REPO = 'vprofile-release'
-		CENTRAL_REPO = 'vpro-maven-central'
-		NEXUSIP = '172.31.5.4'
-		NEXUSPORT = '8081'
-		NEXUS_GRP_REPO = 'vpro-maven-group'
-        NEXUS_LOGIN = 'nexuslogin'
-        SONARSERVER = 'sonarserver'
-        SONARSCANNER = 'sonarscanner'
-        registryCredential = 'ecr:us-west-1:awscreds'
-        appRegistry = '951401132355.dkr.ecr.us-west-1.amazonaws.com/vprofileappimg'
-        vprofileRegistry = "https://951401132355.dkr.ecr.us-west-1.amazonaws.com"
-        cluster = "vprostaging"
-        service = "vproappprodsvc"
-    }
-
-    stages {
-        stage('Build'){
-            steps {
-                sh 'mvn -s settings.xml -DskipTests install'
-            }
-            post {
-                success {
-                    echo "Now Archiving."
-                    archiveArtifacts artifacts: '**/*.war'
-                }
-            }
-        }
-
-        stage('Test'){
-            steps {
-                sh 'mvn -s settings.xml test'
-            }
-
-        }
-
-        stage('Checkstyle Analysis'){
-            steps {
-                sh 'mvn -s settings.xml checkstyle:checkstyle'
-            }
-        }
-
-        stage('Sonar Analysis') {
-            environment {
-                scannerHome = tool "${SONARSCANNER}"
-            }
-            steps {
-               withSonarQubeEnv("${SONARSERVER}") {
-                   sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                   -Dsonar.projectName=vprofile \
-                   -Dsonar.projectVersion=1.0 \
-                   -Dsonar.sources=src/ \
-                   -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                   -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                   -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                   -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
-              }
-            }
-        }
-
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    // Parameter indicates whether to set pipeline to UNSTABLE if Quality Gate fails
-                    // true = set pipeline to UNSTABLE, false = don't
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage("UploadArtifact"){
-            steps{
-                nexusArtifactUploader(
-                  nexusVersion: 'nexus3',
-                  protocol: 'http',
-                  nexusUrl: "${NEXUSIP}:${NEXUSPORT}",
-                  groupId: 'QA',
-                  version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-                  repository: "${RELEASE_REPO}",
-                  credentialsId: "${NEXUS_LOGIN}",
-                  artifacts: [
-                    [artifactId: 'vproapp',
-                     classifier: '',
-                     file: 'target/vprofile-v2.war',
-                     type: 'war']
-                  ]
-                )
-            }
-        }
-
-        stage('Build App Image') {
-            steps {
-                script {
-                    dockerImage = docker.build( appRegistry + ":$BUILD_NUMBER", "./Docker-files/app/multistage/")
-                }
-            }
-        }
-        
-        stage('Upload App Image') {
-          steps{
-            script {
-              docker.withRegistry( vprofileRegistry, registryCredential ) {
-                dockerImage.push("$BUILD_NUMBER")
-                dockerImage.push('latest')
-              }
-            }
-          }
-        }
-
-        stage('Deploy to ECS staging') {
-            steps {
-                withAWS(credentials: 'awscreds', region: 'us-west-1') {
-                    sh 'aws ecs update-service --cluster ${cluster} --service ${service} --force-new-deployment'
-                } 
-            }
-        }
-    }
-    post {
-        always {
-            echo 'Slack Notifications.'
-            slackSend channel: '#jenkinscicd',
-                color: COLOR_MAP[currentBuild.currentResult],
-                message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URL}"
-        }
-    }
-}
+http://<EC2-PUBLIC-IP>:8082
 ```
 
-When uploaded, Jenkins will run a build(GitHub Webhooks), 
-![](https://github.com/Ndzenyuy/Project_9-Continues-delivery-of-webapp/blob/cicd-jenkins/images/vpro%20running%20staging%20task.png)
+Application:
 
-Now the Pipeline is up and running, each time code is uploaded to Github, the pipeline is automatically Triggered
-
-
+```
+http://<EC2-PUBLIC-IP>:8081
+```
