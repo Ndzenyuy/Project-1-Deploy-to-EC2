@@ -32,6 +32,8 @@ By completing this project, you will learn how to:
 
 ## 🏗️ Architecture
 
+![CI/CD Pipeline Architecture](./images/Project1-architecture.png)
+
 
 ## 🔧 Technology Stack
 
@@ -151,19 +153,13 @@ sudo journalctl -u jenkins -n 100
 🔄 Improvements in Next Projects
 Upcoming projects in this DevOps series will introduce:
 
-Nginx reverse proxy
-
-HTTPS with Let’s Encrypt
-
-Dockerized Jenkins & Tomcat
-
-GitHub Actions vs Jenkins
-
-AWS ALB + Auto Scaling
-
-Blue/Green deployments
-
-ECS & Kubernetes migration
+- Nginx reverse proxy
+- HTTPS with Let’s Encrypt
+- Dockerized Jenkins & Tomcat
+- GitHub Actions vs Jenkins
+- AWS ALB + Auto Scaling
+- Blue/Green deployments
+- ECS & Kubernetes migration
 
 🎯 Target Audience
 This project is ideal for:
