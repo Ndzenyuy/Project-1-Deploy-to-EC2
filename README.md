@@ -37,7 +37,7 @@ By completing this project, you will learn how to:
 
 ## 🔧 Technology Stack
 
-| Component | Version |
+| Component |Version |
 |---------|--------|
 | OS | Ubuntu 22.04 |
 | Java | OpenJDK 17 |
