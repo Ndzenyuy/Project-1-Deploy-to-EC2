@@ -14,7 +14,7 @@ In this project, we build a **complete CI/CD pipeline** that:
   - **Jenkins**
 - Builds a Java WAR application using **Maven**
 - Deploys the application automatically to **Tomcat**
-- Performs a basic **health check**
+- Performs a basic **health check** 
 
 
 ## 🧠 Learning Objectives
