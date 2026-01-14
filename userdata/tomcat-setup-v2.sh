@@ -1,6 +1,10 @@
 #!/bin/bash
 # ----------------------------------------------------
-# EC2 UserData: OpenJDK 17 + Maven + Tomcat 9 (8081) + Jenkins (8082)
+# EC2 UserData:
+# OpenJDK 17 + OpenJDK 21 (default)
+# Maven
+# Tomcat 9 (8081) → Java 17
+# Jenkins (8082) → Java 21
 # ----------------------------------------------------
 
 set -e
@@ -9,22 +13,42 @@ echo "Updating system..."
 apt update -y
 
 # ----------------------------------------------------
-# Install Java 17, Maven, utilities
+# Install Java 17, Java 21, Maven, utilities
 # ----------------------------------------------------
-echo "Installing OpenJDK 17, Maven, and utilities..."
+echo "Installing OpenJDK 17, OpenJDK 21, Maven, and utilities..."
 apt install -y \
   openjdk-17-jdk \
+  openjdk-21-jdk \
   maven \
   wget \
   curl \
   gnupg \
   tar
 
+# ----------------------------------------------------
+# Configure Java alternatives (Java 21 as default)
+# ----------------------------------------------------
+update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1711
+update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-21-openjdk-amd64/bin/java 2111
+update-alternatives --auto java
+
+echo "Default Java version:"
 java -version
 mvn -version
 
 # ----------------------------------------------------
-# Install Jenkins
+# System-wide JAVA_HOME definitions
+# ----------------------------------------------------
+cat <<EOF > /etc/profile.d/java.sh
+export JAVA_17_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export JAVA_21_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export JAVA_HOME=\$JAVA_21_HOME
+EOF
+
+chmod +x /etc/profile.d/java.sh
+
+# ----------------------------------------------------
+# Install Jenkins (runs on Java 21)
 # ----------------------------------------------------
 echo "Installing Jenkins..."
 
@@ -37,6 +61,9 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
 
 apt update -y
 apt install -y jenkins
+
+# Force Jenkins to use Java 21 explicitly
+sed -i 's|^#\?JAVA_HOME=.*|JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64|' /etc/default/jenkins
 
 # ----------------------------------------------------
 # Create Tomcat user
@@ -64,7 +91,7 @@ echo "Configuring Tomcat to run on port 8081..."
 sed -i 's/port="8080"/port="8081"/' /opt/apache-tomcat-9.0.96/conf/server.xml
 
 # ----------------------------------------------------
-# Create Tomcat systemd service
+# Create Tomcat systemd service (Java 17)
 # ----------------------------------------------------
 echo "Creating Tomcat systemd service..."
 cat <<EOF > /etc/systemd/system/tomcat9.service
@@ -77,11 +104,6 @@ Type=forking
 User=tomcat
 Group=tomcat
 
-Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
-Environment="CATALINA_HOME=/opt/apache-tomcat-9.0.96"
-Environment="CATALINA_BASE=/opt/apache-tomcat-9.0.96"
-Environment="CATALINA_PID=/opt/apache-tomcat-9.0.96/temp/tomcat.pid"
-Environment="CATALINA_OPTS=-Xms512M -Xmx1024M -server"
 Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
 Environment="CATALINA_HOME=/opt/apache-tomcat-9.0.96"
 Environment="CATALINA_BASE=/opt/apache-tomcat-9.0.96"
@@ -107,16 +129,21 @@ WantedBy=multi-user.target
 EOF
 
 # ----------------------------------------------------
-# Enable and start Tomcat
+# Enable and start services
 # ----------------------------------------------------
 systemctl daemon-reexec
 systemctl daemon-reload
+
+systemctl enable jenkins
+systemctl restart jenkins
+
 systemctl enable tomcat9
 systemctl start tomcat9
 
 echo "----------------------------------------------------"
 echo "Setup complete:"
-echo " - Java 17 installed"
+echo " - Java 21 (default, Jenkins)"
+echo " - Java 17 (Tomcat & builds)"
 echo " - Maven installed"
 echo " - Tomcat running on port 8081"
 echo " - Jenkins running on port 8082"
