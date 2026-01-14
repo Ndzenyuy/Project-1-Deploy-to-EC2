@@ -36,8 +36,8 @@ pipeline {
         
         stage('Test') {
             steps {
-                // sh 'mvn test'
-                sh 'exit 1'
+                sh 'mvn test'
+                // sh 'exit 1'
             }
             post {
                 always {
