@@ -15,7 +15,8 @@ sudo rm -f /opt/apache-tomcat-9.0.96/webapps/ROOT.war
 sudo ls -la /opt/apache-tomcat-9.0.96/webapps/
 
 # Copy your WAR file
-sudo cp target/vprofile-v2.war /opt/apache-tomcat-9.0.96/webapps/ROOT.war
+sudo cp target/lumiatech-v1.war /opt/apache-tomcat-9.0.96/webapps/ROOT.war
+
 
 # Verify it's there and correct size (18M)
 sudo ls -lh /opt/apache-tomcat-9.0.96/webapps/ROOT.war
