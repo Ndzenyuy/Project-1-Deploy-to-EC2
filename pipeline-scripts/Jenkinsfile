@@ -36,7 +36,8 @@ pipeline {
         
         stage('Test') {
             steps {
-                sh 'mvn test'
+                // sh 'mvn test'
+                sh 'exit 1'
             }
             post {
                 always {
@@ -115,12 +116,12 @@ pipeline {
                 channel: SLACK_CHANNEL,
                 color: 'good',
                 message: """\
-✅ *Pipeline Successful*
-*Job:* ${env.JOB_NAME}
-*Build:* #${env.BUILD_NUMBER}
-*URL:* ${env.BUILD_URL}
-🌍 App URL: ${APP_URL}
-"""
+                    ✅ *Pipeline Successful*
+                    *Job:* ${env.JOB_NAME}
+                    *Build:* #${env.BUILD_NUMBER}
+                    *URL:* ${env.BUILD_URL}
+                    🌍 App URL: ${APP_URL}
+                    """
             )
         }
         
@@ -129,12 +130,12 @@ pipeline {
                 channel: SLACK_CHANNEL,
                 color: 'danger',
                 message: """\
-❌ *Pipeline Failed*
-*Job:* ${env.JOB_NAME}
-*Build:* #${env.BUILD_NUMBER}
-*URL:* ${env.BUILD_URL}
-📄 Logs: ${TOMCAT_HOME}/logs/catalina.out
-"""
+                    ❌ *Pipeline Failed*
+                    *Job:* ${env.JOB_NAME}
+                    *Build:* #${env.BUILD_NUMBER}
+                    *URL:* ${env.BUILD_URL}
+                    📄 Logs: ${TOMCAT_HOME}/logs/catalina.out
+                    """
             )
         }
 
