@@ -7,21 +7,23 @@ pipeline {
     }
     
     environment {
-        TOMCAT_HOME = '/opt/apache-tomcat-9.0.96'
-        TOMCAT_WEBAPPS = "${TOMCAT_HOME}/webapps"
-        WAR_FILE = 'lumiatech-v1.war'
+        TOMCAT_HOME     = '/opt/apache-tomcat-9.0.96'
+        TOMCAT_WEBAPPS  = "${TOMCAT_HOME}/webapps"
+        WAR_FILE        = 'lumiatech-v1.war'
+        SLACK_CHANNEL   = '#jenkinscicd'
+        APP_URL         = 'http://localhost:8081'
     }
     
     stages {
+
         stage('Checkout') {
-            steps {                
-                sh 'git checkout main'
+            steps {
+                checkout scm
             }
         }
         
-        stage('Build artifact') {
+        stage('Build Artifact') {
             steps {
-                
                 sh 'mvn clean package -DskipTests'
             }
             post {
@@ -33,7 +35,7 @@ pipeline {
         }
         
         stage('Test') {
-            steps {                
+            steps {
                 sh 'mvn test'
             }
             post {
@@ -45,52 +47,27 @@ pipeline {
                 
         stage('Deploy to Tomcat') {
             steps {
-                echo '========================================='
-                echo 'Deploying application to Tomcat...'
-                echo '========================================='
-                
                 script {
-                    // Stop Tomcat
                     echo 'Stopping Tomcat...'
-                    sh 'sudo systemctl stop tomcat9'
-                    sh 'sleep 3'
+                    sh 'sudo systemctl stop tomcat9 || true'
+                    sleep 3
                     
-                    // Remove old deployment
                     echo 'Cleaning old deployment...'
                     sh """
-                        sudo rm -rf /opt/apache-tomcat-9.0.96/webapps/ROOT
-                        sudo rm -f /opt/apache-tomcat-9.0.96/webapps/ROOT.war
+                        sudo rm -rf ${TOMCAT_WEBAPPS}/ROOT
+                        sudo rm -f  ${TOMCAT_WEBAPPS}/ROOT.war
                     """
                     
-                    // Verify cleanup
-                    echo 'Verifying cleanup...'
-                    sh "sudo ls -la /opt/apache-tomcat-9.0.96/webapps/ || true"
-                    
-                    // Copy new WAR file
-                    echo 'Copying new WAR file...'
-                    sh "sudo cp target/lumiatech-v1.war /opt/apache-tomcat-9.0.96/webapps/ROOT.war"
-                    
-                    // Verify copy
-                    echo 'Verifying deployment file...'
-                    sh "sudo ls -lh /opt/apache-tomcat-9.0.96/webapps/ROOT.war"
-                    
-                    // Set ownership and permissions
-                    echo 'Setting permissions...'
+                    echo 'Deploying new WAR...'
                     sh """
-                        sudo chown tomcat:tomcat /opt/apache-tomcat-9.0.96/webapps/ROOT.war
-                        sudo chmod -R 755 /opt/apache-tomcat-9.0.96/webapps
-                        sleep 5
-                        sudo tail -n 50 /opt/apache-tomcat-9.0.96/logs/catalina.out || true
-                        
+                        sudo cp target/${WAR_FILE} ${TOMCAT_WEBAPPS}/ROOT.war
+                        sudo chown tomcat:tomcat ${TOMCAT_WEBAPPS}/ROOT.war
+                        sudo chmod -R 755 ${TOMCAT_WEBAPPS}
                     """
                     
-                    // Start Tomcat
                     echo 'Starting Tomcat...'
                     sh 'sudo systemctl start tomcat9'
-                    
-                    // Wait for Tomcat to start
-                    echo 'Waiting for Tomcat to initialize...'
-                    sh 'sleep 10'
+                    sleep 10
                 }
             }
             post {
@@ -106,75 +83,63 @@ pipeline {
         
         stage('Health Check') {
             steps {
-                echo '========================================='
-                echo 'Running health check...'
-                echo '========================================='
-                
                 script {
-                    // Wait a bit more for app initialization
-                    sh 'sleep 5'
-                    
-                    // Check if Tomcat is running
+                    echo 'Checking Tomcat status...'
                     sh 'sudo systemctl is-active tomcat9'
-                    
-                    // Check if application responds
+
+                    echo 'Checking application response...'
                     def response = sh(
-                        script: 'curl -s -o /dev/null -w "%{http_code}" http://localhost:8080',
+                        script: "curl -s -o /dev/null -w '%{http_code}' ${APP_URL}",
                         returnStdout: true
                     ).trim()
-                    
+
                     echo "HTTP Response Code: ${response}"
-                    
-                    if (response == '200' || response == '302') {
-                        echo '✓ Application is responding correctly!'
-                    } else {
-                        echo "⚠ Warning: Unexpected HTTP response code: ${response}"
+
+                    if (!(response in ['200', '302'])) {
+                        error "Health check failed with HTTP ${response}"
                     }
-                    
-                    // Check logs for Spring initialization
+
+                    echo 'Checking Spring initialization logs...'
                     sh """
-                        echo 'Checking Spring initialization in logs...'
-                        sudo grep -i 'FrameworkServlet\\|WebApplicationContext: initialization completed\\|Server startup' \
-                        ${TOMCAT_HOME}/logs/catalina.out | tail -5 || echo 'Spring logs not found yet'
+                        sudo grep -i 'FrameworkServlet\\|WebApplicationContext.*initialized\\|Server startup' \
+                        ${TOMCAT_HOME}/logs/catalina.out | tail -5 || true
                     """
                 }
             }
         }
-       
     }
 
-     post {
+    post {
         success {
             slackSend(
-                channel: "${SLACK_CHANNEL}",
+                channel: SLACK_CHANNEL,
                 color: 'good',
-                message: """
-                ✅ *Build Successful*
-                *Job:* ${env.JOB_NAME}
-                *Build:* #${env.BUILD_NUMBER}
-                *URL:* ${env.BUILD_URL}
-                🌍 App running on: http://<EC2-IP>:8081
-                """
+                message: """\
+✅ *Pipeline Successful*
+*Job:* ${env.JOB_NAME}
+*Build:* #${env.BUILD_NUMBER}
+*URL:* ${env.BUILD_URL}
+🌍 App URL: ${APP_URL}
+"""
             )
         }
         
         failure {
             slackSend(
-                channel: "${SLACK_CHANNEL}",
+                channel: SLACK_CHANNEL,
                 color: 'danger',
-                message: """
-                ❌ *Build Failed*
-                *Job:* ${env.JOB_NAME}
-                *Build:* #${env.BUILD_NUMBER}
-                *URL:* ${env.BUILD_URL}
-                📄 Check Tomcat logs:
-                ${TOMCAT_HOME}/logs/catalina.out
-                """
+                message: """\
+❌ *Pipeline Failed*
+*Job:* ${env.JOB_NAME}
+*Build:* #${env.BUILD_NUMBER}
+*URL:* ${env.BUILD_URL}
+📄 Logs: ${TOMCAT_HOME}/logs/catalina.out
+"""
             )
         }
 
         always {
             cleanWs()
-        }   
-    
+        }
+    }
 }
