@@ -22,7 +22,8 @@ pipeline {
         stage('Build artifact') {
             steps {
                 
-                sh 'mvn clean package -DskipTests'
+                // sh 'mvn clean package -DskipTests'
+                sh 'exit 1'
             }
             post {
                 success {
