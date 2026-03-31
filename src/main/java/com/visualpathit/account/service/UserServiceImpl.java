@@ -9,8 +9,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 
-/** {@author waheedk}!*/
+/** {@author imrant}!*/
 @Service
 public class UserServiceImpl implements UserService {
     @Autowired
@@ -33,5 +34,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public User findByUsername(final String username) {
         return userRepository.findByUsername(username);
+    }
+    
+    @Override
+    public List<User> getList() {
+    	return userRepository.findAll();
+    }
+    @Override
+	public User findById(long id){
+    	return userRepository.findById(id);
     }
 }
