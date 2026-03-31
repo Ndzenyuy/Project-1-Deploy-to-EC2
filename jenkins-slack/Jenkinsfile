@@ -10,7 +10,7 @@ pipeline {
         TOMCAT_HOME = '/opt/apache-tomcat-9.0.96'
         TOMCAT_WEBAPPS = "${TOMCAT_HOME}/webapps"
         WAR_FILE = 'lumiatech-v1.war'
-        SLACK_CHANNEL = '#jenkins-builds'
+        SLACK_CHANNEL = '#lumiatech-pipeline'
     }
     
     stages {
