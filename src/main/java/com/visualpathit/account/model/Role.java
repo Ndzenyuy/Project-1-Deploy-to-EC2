@@ -1,9 +1,8 @@
 package com.visualpathit.account.model;
 
-import jakarta.persistence.*;
-
+import javax.persistence.*;
 import java.util.Set;
-/**{@author imrant} !*/
+/**{@author waheedk} !*/
 @Entity
 @Table(name = "role")
 public class Role {
@@ -15,7 +14,7 @@ public class Role {
     private Set<User> users;
     /** {@inheritDoc}} !*/
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     /**
      * {@link Role#id}
      !*/
@@ -23,7 +22,7 @@ public class Role {
         return id;
     }
     /** {@inheritDoc}} !*/
-    public  void setId(final Long id) {
+    public final void setId(final Long id) {
         this.id = id;
     }
     /**
@@ -33,17 +32,17 @@ public class Role {
         return name;
     }
     /** {@inheritDoc}} !*/
-    public  void setName(final String name) {
+    public final void setName(final String name) {
         this.name = name;
     }
     /**
      * {@inheritDoc}} 
      !*/
-    @ManyToMany(fetch = FetchType.EAGER, mappedBy = "roles",cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "roles")
     /**
      * {@link Role#id}
      !*/
-    public Set <User> getUsers() {
+    public Set<User> getUsers() {
         return users;
     }
     /**
