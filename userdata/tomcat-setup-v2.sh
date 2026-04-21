@@ -18,52 +18,20 @@ apt update -y
 echo "Installing OpenJDK 17, OpenJDK 21, Maven, and utilities..."
 apt install -y \
   openjdk-17-jdk \
-  openjdk-21-jdk \
   maven \
   wget \
   curl \
   gnupg \
   tar
 
-# ----------------------------------------------------
-# Configure Java alternatives (Java 21 as default)
-# ----------------------------------------------------
-update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 1711
-update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-21-openjdk-amd64/bin/java 2111
-update-alternatives --auto java
 
 echo "Default Java version:"
 java -version
 mvn -version
 
-# ----------------------------------------------------
-# System-wide JAVA_HOME definitions
-# ----------------------------------------------------
-cat <<EOF > /etc/profile.d/java.sh
-export JAVA_17_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export JAVA_21_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-export JAVA_HOME=\$JAVA_21_HOME
-EOF
+
 
 chmod +x /etc/profile.d/java.sh
-
-# ----------------------------------------------------
-# Install Jenkins (runs on Java 21)
-# ----------------------------------------------------
-echo "Installing Jenkins..."
-
-curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key \
-  | tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian-stable binary/ \
-  | tee /etc/apt/sources.list.d/jenkins.list > /dev/null
-
-apt update -y
-apt install -y jenkins
-
-# Force Jenkins to use Java 21 explicitly
-sed -i 's|^#\?JAVA_HOME=.*|JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64|' /etc/default/jenkins
 
 # ----------------------------------------------------
 # Create Tomcat user
@@ -84,11 +52,6 @@ tar xf apache-tomcat-9.0.96.tar.gz -C /opt/
 chown -R tomcat:tomcat /opt/apache-tomcat-9.0.96
 chmod +x /opt/apache-tomcat-9.0.96/bin/*.sh
 
-# ----------------------------------------------------
-# Change Tomcat port from 8080 → 8081
-# ----------------------------------------------------
-echo "Configuring Tomcat to run on port 8081..."
-sed -i 's/port="8080"/port="8081"/' /opt/apache-tomcat-9.0.96/conf/server.xml
 
 # ----------------------------------------------------
 # Create Tomcat systemd service (Java 17)
@@ -143,7 +106,6 @@ systemctl start tomcat9
 echo "----------------------------------------------------"
 echo "Setup complete:"
 echo " - Java 21 (default, Jenkins)"
-echo " - Java 17 (Tomcat & builds)"
 echo " - Maven installed"
 echo " - Tomcat running on port 8081"
 echo " - Jenkins running on port 8082"
